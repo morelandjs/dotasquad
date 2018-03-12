@@ -1,6 +1,6 @@
 # Dota Squad
 
-Recurrent neural network for Dota pick recommendations 
+Dense neural network for dota pick recommendations 
 
 ## Installation
 
