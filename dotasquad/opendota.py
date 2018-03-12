@@ -88,7 +88,7 @@ def games_gen(skill='medium'):
             yield draft
 
 
-def games(skill='medium', ngames=10**4):
+def games(skill='medium', ngames=10**4, update=False):
     """
     Returns a list of DOTA game drafts
 
@@ -97,16 +97,18 @@ def games(skill='medium', ngames=10**4):
     if not cache_dir.exists():
         cache_dir.mkdir()
 
-    cache_file = Path(cache_dir, 'games_{}_mmr.cache'.format(skill))
+    cache_file = Path(cache_dir, 'games_{}_skill.p'.format(skill))
 
-    if cache_file.exists():
+    if cache_file.exists() and update is False:
         with open(str(cache_file), 'rb') as f:
             return pickle.load(f)
-    else:
-        games = islice(games_gen(skill=skill), ngames)
-        with open(str(cache_file), 'wb') as f:
-            pickle.dump(list(games), f)
-        return games
+
+    games = islice(games_gen(skill=skill), ngames)
+
+    with open(str(cache_file), 'wb') as f:
+        pickle.dump(list(games), f)
+
+    return games
 
 
 def main():

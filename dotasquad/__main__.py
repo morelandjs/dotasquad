@@ -2,7 +2,9 @@
 
 import argparse
 
+from . import opendota
 from . import train
+
 
 def main():
     """
@@ -11,30 +13,17 @@ def main():
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
-            "--radiant",
-            nargs='*',
-            action="store",
-            default=[],
-            type=str,
-            help="radiant picks"
-            )
-    parser.add_argument(
-            "--dire",
-            nargs='*',
-            action="store",
-            default=[],
-            type=str,
-            help="dire picks"
+            "--refresh-cache",
+            action="store_true",
+            default=False,
+            help="download latest dota match data"
             )
 
     args = parser.parse_args()
     args_dict = vars(args)
 
-    radiant = args_dict['radiant']
-    dire = args_dict['dire']
-
-    print(radiant)
-    print(dire)
+    if args_dict['refresh_cache']:
+        opendota.games(refresh=True)
 
 if __name__ == "__main__":
     main()

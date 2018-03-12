@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import tensorflow as tf
-from . import opendota
+import opendota
 
 
 def train_network(layers=6, ngames=10**6):
@@ -16,7 +16,9 @@ def train_network(layers=6, ngames=10**6):
     return weights
 
 def main():
-    print("main routine")
+    games = opendota.games()
+    for g in games:
+        print(g)
 
 if __name__ == "__main__":
     main()
