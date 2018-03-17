@@ -77,15 +77,9 @@ def games_gen(skill='medium'):
         time.sleep(1)
 
         for game in batch_of_games(skill=skill, match_id=match_id):
-            keys = ('radiant', 'dire', 'radiant_win')
-            radiant, dire, radiant_win = [game[k] for k in keys]
-
-            teams = (radiant, dire) if radiant_win else (dire, radiant)
-            heroes = [str(h) for h in chain.from_iterable(zip(*teams))]
-            draft = ' '.join(heroes) + '\n'
-            match_id = game['match_id']
-
-            yield draft
+            keys = ('radiant', 'dire', 'radiant_win', 'match_id')
+            radiant, dire, radiant_win, match_id = [game[k] for k in keys]
+            yield (radiant, dire) if radiant_win else (dire, radiant)
 
 
 def games(skill='medium', ngames=10**4, update=False):
