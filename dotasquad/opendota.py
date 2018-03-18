@@ -5,10 +5,12 @@ import logging
 import pickle
 import requests
 import time
-from itertools import chain, islice
+from collections import Counter
+from itertools import islice
 from pathlib import Path
 
 from xdg import XDG_DATA_HOME
+
 
 mmr_range = dict(
         low=(1500, 2500),
@@ -34,7 +36,7 @@ def hero_names():
     return names
 
 
-def batch_of_games(skill='medium', batch_size=10**3, match_id=None):
+def batch_of_games(skill='medium', batch_size=1000, match_id=None):
     """
     SQL request to pull a batch of DOTA games within a specific mmr range.
     The match_id specifies the most recent game to start pulling from.
@@ -82,7 +84,7 @@ def games_gen(skill='medium'):
             yield (radiant, dire) if radiant_win else (dire, radiant)
 
 
-def games(skill='medium', ngames=10**4, update=False):
+def games(skill='high', update=False):
     """
     Returns a list of DOTA game drafts
 
@@ -97,7 +99,7 @@ def games(skill='medium', ngames=10**4, update=False):
         with open(str(cache_file), 'rb') as f:
             return pickle.load(f)
 
-    games = islice(games_gen(skill=skill), ngames)
+    games = islice(games_gen(skill=skill), 10**5)
 
     with open(str(cache_file), 'wb') as f:
         pickle.dump(list(games), f)
@@ -111,9 +113,25 @@ def main():
 
     """
     logging.basicConfig(level=logging.INFO)
-    for game in games():
-        print(game)
+    winner_picks = [h for (h, *_), _ in games()]
+    loser_picks = [h for _, (h, *_) in games()]
 
+    wins = Counter(winner_picks)
+    picks = Counter(winner_picks + loser_picks)
+
+    heroes = hero_names()
+    TINY = 1e-6
+
+    best_picks = [
+            (wins[n] / picks[n], hero)
+            for n, hero in heroes.items()
+            if picks[n] > 100
+            ]
+
+    for rank, (pwin, hero) in enumerate(
+            sorted(best_picks, reverse=True), start=1):
+
+        print("{0:03d}".format(rank), "{0:.3f}".format(pwin), hero)
 
 if __name__ == "__main__":
     main()
