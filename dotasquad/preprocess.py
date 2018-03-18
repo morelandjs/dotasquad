@@ -24,6 +24,18 @@ class Drafts:
         """
         self.build_training_data(skill)
 
+    def split(self, frac=.8):
+        """
+        Split the x and y observation data into a training set
+        and a test (validation) set
+
+        """
+        dim = set([len(self.x), len(self.y)])
+        assert len(dim) == 1
+
+        n = int(frac*dim.pop())
+        return (self.x[:n], self.y[:n]), (self.x[n:], self.y[n:])
+
     def binary(self, team):
         """
         Express team's draft as a vector of 0's and 1's
