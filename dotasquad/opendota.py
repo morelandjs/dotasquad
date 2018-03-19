@@ -19,7 +19,7 @@ mmr_range = dict(
         )
 
 
-def hero_names():
+def hero_dict():
     """
     Dictionary from hero id's to hero names
 
@@ -31,7 +31,10 @@ def hero_names():
     for hero in json.loads(response.text):
         names.update({hero['id']: hero['localized_name']})
 
-    names.update({0: 'none'})
+    # Add generic hero tags for missing heroes
+    for n in range(max(names)):
+        if n not in names:
+            names.update({n: 'hero_{}'.format(n)})
 
     return names
 
