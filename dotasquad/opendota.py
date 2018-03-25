@@ -87,7 +87,7 @@ def games_gen(skill='medium'):
             yield (radiant, dire) if radiant_win else (dire, radiant)
 
 
-def games(skill='high', update=False):
+def games(skill='medium', update=False):
     """
     Returns a list of DOTA game drafts
 
@@ -102,7 +102,7 @@ def games(skill='high', update=False):
         with open(str(cache_file), 'rb') as f:
             return pickle.load(f)
 
-    games = islice(games_gen(skill=skill), 10**5)
+    games = islice(games_gen(skill=skill), 10**3)
 
     with open(str(cache_file), 'wb') as f:
         pickle.dump(list(games), f)
@@ -122,7 +122,7 @@ def main():
     wins = Counter(winner_picks)
     picks = Counter(winner_picks + loser_picks)
 
-    heroes = hero_names()
+    heroes = hero_dict()
     TINY = 1e-6
 
     best_picks = [
