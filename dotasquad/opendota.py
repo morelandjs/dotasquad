@@ -1,22 +1,10 @@
 #!/usr/bin/env python3
 
+from itertools import cycle, islice
 import json
-import logging
-import pickle
 import requests
-import time
-from collections import Counter
-from itertools import islice
-from pathlib import Path
 
-from xdg import XDG_DATA_HOME
-
-
-mmr_range = dict(
-        low=(1500, 2500),
-        medium=(2500, 3500),
-        high=(3500, 4500),
-        )
+import numpy as np
 
 
 def hero_dict():
@@ -29,17 +17,18 @@ def hero_dict():
     response = requests.get(endpoint)
 
     for hero in json.loads(response.text):
-        names.update({hero['id']: hero['localized_name']})
+        hero_name = hero['localized_name'].replace('\'','').replace(' ', '_')
+        hero_id = hero['id']
+        names.update({hero_id: hero_name})
 
-    # Add generic hero tags for missing heroes
     for n in range(max(names)):
         if n not in names:
-            names.update({n: 'hero_{}'.format(n)})
+            names.update({n: 'Hero_{}'.format(n)})
 
     return names
 
 
-def batch_of_games(skill='medium', batch_size=1000, match_id=None):
+def batch_of_games(mmr_range, batch_size=1000, match_id=None):
     """
     SQL request to pull a batch of DOTA games within a specific mmr range.
     The match_id specifies the most recent game to start pulling from.
@@ -49,7 +38,6 @@ def batch_of_games(skill='medium', batch_size=1000, match_id=None):
 
     radiant = 'array_agg(CASE WHEN p.player_slot < 5 THEN p.hero_id END)'
     dire = 'array_agg(CASE WHEN p.player_slot > 5 THEN p.hero_id END)'
-    bracket = mmr_range[skill]
 
     sql_query = [
             'select m.match_id, m.radiant_win, m.avg_mmr,',
@@ -57,7 +45,7 @@ def batch_of_games(skill='medium', batch_size=1000, match_id=None):
             'array_remove({}, NULL) as dire'.format(dire),
             'from public_matches m',
             'join public_player_matches p on m.match_id = p.match_id',
-            'where m.avg_mmr > {} and m.avg_mmr < {}'.format(*bracket),
+            'where m.avg_mmr > {} and m.avg_mmr < {}'.format(*mmr_range),
             'and m.match_id < {}'.format(match_id) if match_id else '',
             'group by m.match_id'.format(batch_size),
             'order by m.match_id desc limit {};'.format(batch_size)
@@ -69,45 +57,62 @@ def batch_of_games(skill='medium', batch_size=1000, match_id=None):
         yield game
 
 
-def games_gen(skill='medium'):
+def games_gen(mmr_range):
     """
     Generator which yields DOTA games in the specified mmr range.
 
     """
-    logging.info("Downloading DOTA game data")
+    heroes = hero_dict()
     match_id = None
 
-    while True:
-        logging.info("Retrieving games from match id: {}".format(match_id))
-        time.sleep(1)
+    def binary(team):
+        """
+        Express team's draft as a vector of 0's and 1's
 
-        for game in batch_of_games(skill=skill, match_id=match_id):
+        """
+        return [(1 if hero in team else 0) for hero in range(len(heroes))]
+
+    while True:
+        for game in batch_of_games(mmr_range, match_id=match_id):
             keys = ('radiant', 'dire', 'radiant_win', 'match_id')
             radiant, dire, radiant_win, match_id = [game[k] for k in keys]
-            yield (radiant, dire) if radiant_win else (dire, radiant)
+            winner, loser = (radiant, dire) if radiant_win else (dire, radiant)
+
+            for npicked in range(10):
+                draft_order = [iter(loser), iter(winner)]
+                partial_draft = islice(cycle(draft_order), npicked)
+
+                picked = [pick.__next__() for pick in partial_draft]
+                winner_picked, loser_picked = [
+                        [h for h in team if h in picked]
+                        for team in (winner, loser)
+                        ]
+
+                try:
+                    x = binary(winner_picked) + binary(loser_picked)
+                    y = [h for h in winner if h not in winner_picked].pop(0)
+                    yield x, y
+                except IndexError:
+                    continue
 
 
-def games(skill='medium', update=False):
+def train_input_fn():
     """
-    Returns a list of DOTA game drafts
+    Network input function which supplies dota game data to the network
 
     """
-    cache_dir = Path(XDG_DATA_HOME, 'dota')
-    if not cache_dir.exists():
-        cache_dir.mkdir()
+    heroes = hero_dict()
 
-    cache_file = Path(cache_dir, 'games_{}_skill.p'.format(skill))
+    hero_names = [
+            '{}_{}'.format(prefix, hero)
+            for prefix in ('Ally', 'Enemy')
+            for hero_id, hero in sorted(heroes.items())
+            ]
 
-    if cache_file.exists() and update is False:
-        with open(str(cache_file), 'rb') as f:
-            return pickle.load(f)
+    games = list(islice(games_gen((2500, 3500)), 10**5))
+    X, y = zip(*games)
 
-    games = islice(games_gen(skill=skill), 10**3)
-
-    with open(str(cache_file), 'wb') as f:
-        pickle.dump(list(games), f)
-
-    return games
+    return dict(zip(hero_names, np.array(X).T)), np.array(y)
 
 
 def main():
@@ -115,26 +120,8 @@ def main():
     Scape OpenDOTA API and save game draft data to a text file.
 
     """
-    logging.basicConfig(level=logging.INFO)
-    winner_picks = [h for (h, *_), _ in games()]
-    loser_picks = [h for _, (h, *_) in games()]
-
-    wins = Counter(winner_picks)
-    picks = Counter(winner_picks + loser_picks)
-
-    heroes = hero_dict()
-    TINY = 1e-6
-
-    best_picks = [
-            (wins[n] / picks[n], hero)
-            for n, hero in heroes.items()
-            if picks[n] > 100
-            ]
-
-    for rank, (pwin, hero) in enumerate(
-            sorted(best_picks, reverse=True), start=1):
-
-        print("{0:03d}".format(rank), "{0:.3f}".format(pwin), hero)
+    for game in islice(games_gen((2500, 3500)), 10):
+        print(game)
 
 if __name__ == "__main__":
     main()
