@@ -5,6 +5,7 @@ import json
 import requests
 
 import numpy as np
+import tensorflow as tf
 
 
 def hero_dict():
@@ -96,23 +97,29 @@ def games_gen(mmr_range):
                     continue
 
 
-def train_input_fn():
-    """
-    Network input function which supplies dota game data to the network
-
-    """
-    heroes = hero_dict()
-
-    hero_names = [
-            '{}_{}'.format(prefix, hero)
-            for prefix in ('Ally', 'Enemy')
-            for hero_id, hero in sorted(heroes.items())
-            ]
-
-    games = list(islice(games_gen((2500, 3500)), 10**5))
-    X, y = zip(*games)
-
-    return dict(zip(hero_names, np.array(X).T)), np.array(y)
+#def train_input_fn(batch_size=100):
+#    """
+#    Network input function which supplies dota game data to the network
+#
+#    """
+#    heroes = hero_dict()
+#
+#    hero_names = [
+#            '{}_{}'.format(prefix, hero)
+#            for prefix in ('Ally', 'Enemy')
+#            for hero_id, hero in sorted(heroes.items())
+#            ]
+#
+#    games = list(islice(games_gen((2500, 3500)), 10**5))
+#    X, y = zip(*games)
+#
+#    dataset = tf.data.Dataset.from_tensor_slices(
+#            (dict(zip(hero_names, np.array(X).T)), np.array(y))
+#            )
+#
+#    dataset = dataset.shuffle(1000).repeat().batch(batch_size)
+#
+#    return dataset
 
 
 def main():
