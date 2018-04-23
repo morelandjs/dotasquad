@@ -26,7 +26,7 @@ parser.add_argument(
 
 def train_input_fn(features, labels, batch_size=100):
     """
-    Network input function which supplies dota game data to the network
+    Network input function which supplies dota game data
 
     """
     dataset = tf.data.Dataset.from_tensor_slices((features, labels))
@@ -76,6 +76,11 @@ def main(argv):
             input_fn=lambda: train_input_fn(features, labels),
             steps=args.train_steps
             )
+
+    # Generate predictions.
+    # TODO finish writing the prediction code
+    # classifier.predict(
+    #         input_fn=lambda: eval_input_fn(predict_x
 
 
 if __name__ == "__main__":
