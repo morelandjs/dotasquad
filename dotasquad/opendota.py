@@ -51,8 +51,11 @@ def batch_of_games(mmr_range, batch_size=1000, match_id=None):
 
     response = requests.get(endpoint + 'sql=' + ' '.join(sql_query))
 
-    for game in json.loads(response.text)['rows']:
-        yield game
+    try:
+        for game in json.loads(response.text)['rows']:
+            yield game
+    except KeyError:
+        pass
 
 
 def games_gen(mmr_range):
