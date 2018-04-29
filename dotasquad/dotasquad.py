@@ -4,7 +4,7 @@ import argparse
 from itertools import islice
 from pathlib import Path
 
-import fuzzywuzzy
+from fuzzywuzzy import process
 import numpy as np
 import tensorflow as tf
 from xdg import XDG_DATA_HOME
@@ -104,7 +104,7 @@ def predict(ally_picks, enemy_picks):
 
     for heroes, team in [(ally_picks, 'Ally'), (enemy_picks, 'Enemy')]:
         for fuzzy_hero in heroes:
-            hero = fuzzywuzzy.process.extractOne(
+            hero = process.extractOne(
                     '{}_{}'.format(team, fuzzy_hero), hero_names
                     )[0]
             features[hero] = np.ones(1, dtype=int)
