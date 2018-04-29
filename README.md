@@ -26,7 +26,7 @@ Train the model by calling dotasquad with optional arguments to specify the numb
 python3 dotasquad.py --train-steps 100000 --mmr-range 2500 3500
 ```
 Training the model could take some time. Tensorflow reports both the training step
-and cross entropy loss for each batch of training samples.
+and cross entropy loss for each batch of training samples to monitor progress.
 
 The model's progress is periodically saved during training. For example, the network graph and calibrated node weights are cached in `$XDG_DATA_HOME/dota`. If these cache files exist when training is started, tensorflow will attempt to
 recover from the last available checkpoint. Consequently, one should delete this
