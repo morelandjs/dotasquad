@@ -35,17 +35,16 @@ parser.add_argument(
 
 args = parser.parse_args()
 
-# Dictionary of hero names which are the 'features'
-# of the classification problem.
-heroes = opendota.hero_dict()
-hero_names = [
+# List of hero names indexed by hero id
+heroes = opendota.hero_names()
+ally_enemy_heroes = [
         '{}_{}'.format(prefix, hero)
-        for prefix in ('Ally', 'Enemy')
-        for hero_id, hero in sorted(heroes.items())
+        for prefix in ('Ally', 'Enemy') for hero in heroes
         ]
 
+# Label feature columns with hero names
 feature_columns = []
-for hero in hero_names:
+for hero in ally_enemy_heroes:
     col = tf.feature_column.numeric_column(key=hero, dtype=tf.int64)
     feature_columns.append(col)
 
@@ -57,7 +56,7 @@ model_dir.mkdir(parents=True, exist_ok=True)
 classifier = tf.estimator.DNNClassifier(
     feature_columns=feature_columns,
     hidden_units=[242, 242, 200, 160, 121, 121],
-    n_classes=len(feature_columns),
+    n_classes=121,
     model_dir=model_dir
     )
 
@@ -86,7 +85,7 @@ def train(mmr_range=(2500, 3500), steps=10**5):
     games = list(islice(opendota.games_gen(mmr_range), steps))
     X, y = zip(*games)
 
-    features = dict(zip(hero_names, np.array(X).T))
+    features = dict(zip(ally_enemy_heroes, np.array(X).T))
     labels = np.array(y)
 
     classifier.train(
@@ -100,12 +99,12 @@ def predict(ally_picks, enemy_picks):
     Recommend the next hero given current team and enemy heroes
 
     """
-    features = {h: np.zeros(1, dtype=int) for h in hero_names}
+    features = {h: np.zeros(1, dtype=int) for h in ally_enemy_heroes}
 
-    for heroes, team in [(ally_picks, 'Ally'), (enemy_picks, 'Enemy')]:
-        for fuzzy_hero in heroes:
+    for picks, team in [(ally_picks, 'Ally'), (enemy_picks, 'Enemy')]:
+        for fuzzy_hero in picks:
             hero = process.extractOne(
-                    '{}_{}'.format(team, fuzzy_hero), hero_names
+                    '{}_{}'.format(team, fuzzy_hero), ally_enemy_heroes
                     )[0]
             features[hero] = np.ones(1, dtype=int)
 
@@ -114,7 +113,8 @@ def predict(ally_picks, enemy_picks):
             )
 
     probabilities = next(predictions)['probabilities']
-    hero_prob = dict(zip(hero_names, probabilities))
+    hero_prob = dict(zip(heroes, probabilities))
+
     return list(sorted(hero_prob.items(), key=lambda x: x[1], reverse=True))
 
 

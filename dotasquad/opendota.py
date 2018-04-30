@@ -5,9 +5,9 @@ import json
 import requests
 
 
-def hero_dict():
+def hero_names():
     """
-    Dictionary from hero id's to hero names
+    List of heroes, indexed by hero id.
 
     """
     names = {}
@@ -23,7 +23,7 @@ def hero_dict():
         if n not in names:
             names.update({n: 'Hero_{}'.format(n)})
 
-    return names
+    return [hero for hero_id, hero in sorted(names.items())]
 
 
 def batch_of_games(mmr_range, batch_size=1000, match_id=None):
@@ -63,7 +63,7 @@ def games_gen(mmr_range):
     Generator which yields DOTA games in the specified mmr range.
 
     """
-    heroes = hero_dict()
+    heroes = hero_names()
     match_id = None
 
     def binary(team):
